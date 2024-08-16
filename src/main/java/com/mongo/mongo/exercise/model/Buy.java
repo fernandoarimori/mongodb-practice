@@ -10,6 +10,8 @@ import org.springframework.data.mongodb.core.mapping.FieldType;
 import org.springframework.data.mongodb.core.mapping.MongoId;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Getter
 @Setter
@@ -27,8 +29,8 @@ public class Buy {
     @Field(targetType = FieldType.STRING)
     private PayCond payCond;
     private Item item;
-    private LocalDate postDate;
-    private LocalDate updateDate;
+    private LocalDateTime postDate;
+    private LocalDateTime updateDate;
 
     public Buy(BuyPostDTO buyPostDTO, Item item) {
         this.name = buyPostDTO.name();
@@ -36,12 +38,13 @@ public class Buy {
         this.price = null;
         this.payCond = PayCond.MADE;
         this.item = item;
-        this.postDate = LocalDate.now();
+        this.postDate = LocalDateTime.now(ZoneId.systemDefault());
     }
 
     public void update(BuyPostDTO dto, Item  item) {
         this.name = dto.name();
         this.email = dto.email();
         this.item = item;
+        this.updateDate = LocalDateTime.now();
     }
 }

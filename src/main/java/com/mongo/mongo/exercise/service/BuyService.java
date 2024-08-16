@@ -49,7 +49,6 @@ public class BuyService {
         System.out.println(dto.toString());
         Buy foundOne = buyRepository.findById(id).get();
         Item foundOneItem = itemRepository.findById(foundOne.getItem().getId()).get();
-        System.out.println(foundOneItem.getPriceItem());
         foundOne.update(dto, foundOneItem);
         foundOneItem.update(dto.item());
         buyRepository.save(foundOne);
