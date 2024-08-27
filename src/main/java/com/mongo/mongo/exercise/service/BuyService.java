@@ -2,8 +2,7 @@ package com.mongo.mongo.exercise.service;
 
 import com.mongo.mongo.exercise.model.Buy;
 import com.mongo.mongo.exercise.model.Item;
-import com.mongo.mongo.exercise.model.dto.BuyPostDTO;
-import com.mongo.mongo.exercise.model.dto.BuyResponseDTO;
+import com.mongo.mongo.exercise.model.dto.*;
 import com.mongo.mongo.exercise.repository.BuyRepository;
 import com.mongo.mongo.exercise.repository.ItemRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,16 +25,26 @@ public class BuyService {
     public final ItemRepository itemRepository;
 
     public ResponseEntity postBuy(BuyPostDTO buyPostDTO, UriComponentsBuilder builder) {
-        Item itemToPost = new Item(buyPostDTO.item(), idGeneratorToBuy(buyRepository));
-        itemToPost.setId(idGeneratorToItem(itemRepository));
-        Item savedItem = itemRepository.save(itemToPost);
-        Buy toPost = new Buy(buyPostDTO, savedItem);
-        toPost.setId(idGeneratorToBuy(buyRepository));
+        Long idBuy =idGeneratorToBuy(buyRepository);
+        Buy toPost = new Buy(buyPostDTO);
+        toPost.setId(idBuy);
         Buy savedOne = buyRepository.save(toPost);
-        savedItem.setBuyId(savedOne.getId());
-        itemRepository.save(savedItem);
-        URI uri = builder.path("/buy/{id}").buildAndExpand(savedOne.getId()).toUri();
-        return ResponseEntity.created(uri).body(new BuyResponseDTO(savedOne));
+        List<Item> itemToSave = new ArrayList<>();
+        buyPostDTO.item().forEach(
+                item->{
+                    Long idItem = idGeneratorToItem(itemRepository);
+                    Item itemPost = new Item(item);
+                    itemPost.setId(idItem);
+                    itemPost.setBuyId(savedOne.getId());
+                    itemRepository.save(itemPost);
+                    itemToSave.add(itemPost);
+                }
+        );
+        savedOne.setItem(itemToSave);
+        Buy response = buyRepository.save(savedOne);
+        System.out.println(response.getId());
+        URI uri = builder.path("/buy/{id}").buildAndExpand(response.getId()).toUri();
+        return ResponseEntity.created(uri).body(new BuyResponseDTO(response));
     }
 
     public ResponseEntity<Page<BuyResponseDTO>> findAll(Pageable pageable) {
@@ -45,14 +57,48 @@ public class BuyService {
         return ResponseEntity.ok().body(new BuyResponseDTO(foundOne));
     }
 
-    public ResponseEntity updateBuy(Long id, BuyPostDTO dto) {
-        System.out.println(dto.toString());
+    public ResponseEntity updateBuy(Long id, BuyEditDTO dto) {
         Buy foundOne = buyRepository.findById(id).get();
-        Item foundOneItem = itemRepository.findById(foundOne.getItem().getId()).get();
-        foundOne.update(dto, foundOneItem);
-        foundOneItem.update(dto.item());
+        List<Item> foundItens = new ArrayList<>();
+        List<Item> allItens = itemRepository.findAll();
+        allItens.forEach(
+                item->{
+                    if(item.getBuyId()==foundOne.getId()){
+                        foundItens.add(item);
+                        System.out.println(item.getName());
+                    }
+                }
+        );
+        List<ItemUpdateDTO> listItemDTO = dto.item();
+        List<Item> updatedOne = new ArrayList<>();
+        foundItens.forEach(
+                item -> {
+                    Item foundItem = itemRepository.findById(item.getId()).get();
+                    allItens.forEach(
+                            x ->
+                            {
+                                if (x.getBuyId() == foundOne.getId()) {
+                                    itemRepository.deleteById(x.getId());
+                                }
+                            }
+                    );
+                    listItemDTO.forEach(
+                            dtoUpdate->{
+                                foundItem.update(dtoUpdate);
+                                foundItem.setBuyId(foundItem.getBuyId());
+                                itemRepository.save(foundItem);
+                            }
+                    );
+                }
+        );
+        listItemDTO.forEach(
+                item->{
+                    Item foundItemToList = itemRepository.findByBuyId(foundOne.getId());
+                    updatedOne.add(foundItemToList);
+                }
+        );
+        foundOne.update(dto, updatedOne);
         buyRepository.save(foundOne);
-        itemRepository.save(foundOne.getItem());
         return ResponseEntity.ok().body(new BuyResponseDTO(foundOne));
     }
 

@@ -2,6 +2,7 @@ package com.mongo.mongo.exercise.model;
 
 import com.mongo.mongo.exercise.model.dto.BuyPostDTO;
 import com.mongo.mongo.exercise.model.dto.ItemRequestDTO;
+import com.mongo.mongo.exercise.model.dto.ItemUpdateDTO;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -42,7 +43,7 @@ public class Item {
         this.buyId = buyId;
     }
 
-    public void update(ItemRequestDTO item) {
+    public void update(ItemUpdateDTO item) {
         this.description = item.description();
         this.name = item.name();
         this.priceItem = item.price();
